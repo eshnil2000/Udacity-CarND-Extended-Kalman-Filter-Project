@@ -36,7 +36,11 @@ FusionEKF::FusionEKF() {
     * Finish initializing the FusionEKF.
     * Set the process and measurement noises
   */
-
+  H_laser_ << 1, 0, 0, 0,
+        0, 1, 0, 0;
+  /**
+  TODO COMPLETED
+  */
 
 }
 
@@ -58,21 +62,50 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       * Create the covariance matrix.
       * Remember: you'll need to convert radar from polar to cartesian coordinates.
     */
-    // first measurement
     cout << "EKF: " << endl;
+    //x_ is state vector representing positionx, positiony, velocityx, velocityy
     ekf_.x_ = VectorXd(4);
-    ekf_.x_ << 1, 1, 1, 1;
+    ekf_.x_ << 1, 1, 0, 0;
+
+    //Set first measurements to get started
+    float first_measurement_x = measurement_pack.raw_measurements_[0];
+    float first_measurement_y = measurement_pack.raw_measurements_[1];
 
     if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
       /**
-      Convert radar from polar to cartesian coordinates and initialize state.
+      
+      Hence, Convert radar measurements from polar to cartesian coordinates and initialize state.
       */
+      ekf_.x_[0] = first_measurement_x*cos(first_measurement_y);
+      ekf_.x_[1] = first_measurement_x*sin(first_measurement_y);
     }
     else if (measurement_pack.sensor_type_ == MeasurementPackage::LASER) {
       /**
-      Initialize state.
+      Leave LASER measurements as is, already in terms of px, py.
       */
+      ekf_.x_[0] = first_measurement_x;
+      ekf_.x_[1] = first_measurement_y;
     }
+
+    /**
+     *Initializing State uncertainity matrix. Set uncertainty for velocity about 10X that of position
+     */
+    ekf_.P_ = MatrixXd(4, 4);
+    ekf_.P_ << 10, 0, 0, 0,
+        0, 10, 0, 0,
+        0, 0, 1000, 0,
+        0, 0, 0, 1000;
+
+    previous_timestamp_ = measurement_pack.timestamp_;
+
+    /**
+     *Declaration of F matrix once. F matrix is updated with deltaT for every measurement received.
+     *Initializing State transition matrix*/
+    ekf_.F_ = MatrixXd(4, 4);
+    ekf_.F_ << 1, 0, 1, 0,
+        0, 1, 0, 1,
+        0, 0, 1, 0,
+        0, 0, 0, 1;
 
     // done initializing, no need to predict or update
     is_initialized_ = true;
@@ -91,6 +124,32 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
      * Use noise_ax = 9 and noise_ay = 9 for your Q matrix.
    */
 
+  /*delta in timestamp*/
+  float deltaT = measurement_pack.timestamp_ - previous_timestamp_;
+  //Converting time to seconds.
+  deltaT = deltaT/pow(10.0, 6);
+
+  //Setting previous timestamp to current timestamp
+  previous_timestamp_ = measurement_pack.timestamp_;
+
+  /*Initializing Process covariance matrix, with acceleration parameters*/
+  float noise_ax = 9;
+  float noise_ay = 9;
+  float time_r2 = pow(deltaT, 2);
+  float time_r3 = pow(deltaT, 3);
+  float time_r4 = pow(deltaT, 4);
+
+  //Update F matrix to take into account deltaT for latest measurement received.
+  ekf_.F_.row(0)[2] = deltaT;
+  ekf_.F_.row(1)[3] = deltaT;
+
+  //Declare and fill state covariance matrix.
+  ekf_.Q_ = MatrixXd(4, 4);
+  ekf_.Q_ << time_r4*noise_ax/4, 0, time_r3*noise_ax/2, 0,
+      0, time_r4*noise_ay/4, 0, time_r3*noise_ay/2,
+      time_r3*noise_ax/2, 0, time_r2*noise_ax, 0,
+      0, time_r3*noise_ay/2, 0, time_r2*noise_ay;
+
   ekf_.Predict();
 
   /*****************************************************************************
@@ -104,9 +163,16 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
    */
 
   if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
-    // Radar updates
+    // Radar updates. Use Extended Kalman filter which linearizes results, takes Jacobian for F & H
+    ekf_.R_ = R_radar_;
+    Hj_ = tools.CalculateJacobian(ekf_.x_);
+    ekf_.H_ = Hj_;
+    ekf_.UpdateEKF(measurement_pack.raw_measurements_);
   } else {
-    // Laser updates
+    // Laser updates. Proceed with  Kalman filter.
+    ekf_.R_ = R_laser_;
+    ekf_.H_ = H_laser_;
+    ekf_.Update(measurement_pack.raw_measurements_);
   }
 
   // print the output

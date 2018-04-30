@@ -1,6 +1,111 @@
 # Extended Kalman Filter Project Starter Code
 Self-Driving Car Engineer Nanodegree Program
 
+## Background
+A Kalman filter can be used to estimate the state of a system. In the case of Self-Driving cars, the use case for example is that of the Self Driving car tracking the state of another moving vehicle. The "State" of that moving vehicle can be denoted by px, py, vx, vy (Positions & Velocity in X & Y directions). These state variables may not be directly observable, so they need to be estimated via LIDAR & RADAR measurements taken from sensors on the Self-Driving Car. 
+
+## Kalman Filter Intuition (From Udacity Lecture)
+The Kalman equation contains many variables, so here is a high level overview to get some intuition about what the Kalman filter is doing.
+
+Prediction
+Let's say we know an object's current position and velocity , which we keep in the x variable. Now one second has passed. We can predict where the object will be one second later because we knew the object position and velocity one second ago; we'll just assume the object kept going at the same velocity.
+
+The x' =Fx+ν equation does these prediction calculations for us.
+
+But maybe the object didn't maintain the exact same velocity. Maybe the object changed direction, accelerated or decelerated. So when we predict the position one second later, our uncertainty increases. P' =FPFT+Q represents this increase in uncertainty.
+
+Process noise refers to the uncertainty in the prediction step. We assume the object travels at a constant velocity, but in reality, the object might accelerate or decelerate. The notation \nu \sim N(0, Q)ν∼N(0,Q) defines the process noise as a gaussian distribution with mean zero and covariance Q.
+
+Update
+Now we get some sensor information that tells where the object is relative to the car. First we compare where we think we are with what the sensor data tells us y = z - Hx'y=z−Hx 
+
+The K matrix, often called the Kalman filter gain, combines the uncertainty of where we think we are P with the uncertainty of our sensor measurement R. If our sensor measurements are very uncertain (R is high relative to P'), then the Kalman filter will give more weight to where we think we are: x'x 
+′
+ . If where we think we are is uncertain (P' is high relative to R), the Kalman filter will put more weight on the sensor measurement: zz.
+
+Measurement noise refers to uncertainty in sensor measurements. The notation \omega \sim N(0, R)ω∼N(0,R) defines the measurement noise as a gaussian distribution with mean zero and covariance R. Measurement noise comes from uncertainty in sensor measurements.
+
+
+## Kalman Filter Algorithm Psuedo-Code:
+Prediction:
+"F" represents State transition matrix, which when multiplied with current X [position, velocity] returns new X.
+For 1 dimension
+F= [1 Δt
+    0 1]
+X=[px;vx]
+
+This can be extended to more dimensions.
+X=[px;py;vx;vy]
+
+
+x0 = F x + u
+"P" represents state uncertainty. Q represents process uncertainty. In this case, we're only modeling position & velocity, so Q is modeling acceleration as random noise.
+P is diagonal, choose larger values for P if highly uncertain of initial position.
+
+P0 = F P F T + Q
+
+Measurement Update:
+'y' represents the error
+"H" represents the measurement function. When you measure LIDAR, you only have position info not velocity. H matrix helps zero out the velocity component.
+
+y = z − Hx0
+
+"S" represents measurement uncertainty, with R measurement noise
+S = HP0HT + R
+"K" represents Kalmann gain
+K = P0HT S−1
+"X" update - depending on whether measurement uncertainty versus a-prior uncertainty, x0 or y term will dominate the update
+x = x0 + Ky
+P = (I − KH)P0
+
+Intuition: 
+If measurement covariance [Q] is smaller than the A-prior estimate covariance P, then measurement will dominate. If Q is larger, then the A-priori estimate will dominate
+
+LIDAR measurements provide (noisy) 
+L 3.122427e-01  5.803398e-01  1477010443000000  6.000000e-01  6.000000e-01  5.199937e+00  0 0 6.911322e-03
+
+For laser sensors, we have a 2D measurement vector. Each location component px, py are affected by a random noise.R is the measurement noise covariance matrix. Typically provided by manufacturer.
+
+RADAR measurements provide (noisy)
+R 1.014892e+00  5.543292e-01  4.892807e+00  1477010443050000  8.599968e-01  6.000449e-01  5.199747e+00  1.796856e-03  3.455661e-04  1.382155e-02
+
+For radar measurements, we have a 3D vector representing radial distance, angle (between  vertical axis X and the heading vector) and radial velocity. 
+The H matrix for Radar (similar to H matrix for LIDAR) is a function which maps radial to x,y coordinates.
+The H matrix is non-linear. TO linearize, use Taylor expansion and take derivatives, expressed as Jacobian. The Jacobian calculates partial derivatives of rho, phi and radial velocity with respect to px,py,vx,vy.
+
+The Kalman Filter equation is same for RADAR except, take the Jacobian fo F & H instead of F & H as in the LIDAR equations.
+
+To check accuracy, use Root Mean Square Error cumulatively, but separately for px,py,vx,vy. Evaluate versus "Ground Truth " X,Y values, which are provided with each measurement.
+
+## Input Data File Description
+Each row represents a sensor measurement where the first column tells you if the measurement comes from radar (R) or lidar (L).
+
+For a row containing radar data, the columns are: sensor_type, rho_measured, phi_measured, rhodot_measured, timestamp, x_groundtruth, y_groundtruth, vx_groundtruth, vy_groundtruth, yaw_groundtruth, yawrate_groundtruth.
+
+For a row containing lidar data, the columns are: sensor_type, x_measured, y_measured, timestamp, x_groundtruth, y_groundtruth, vx_groundtruth, vy_groundtruth, yaw_groundtruth, yawrate_groundtruth.
+
+Whereas radar has three measurements (rho, phi, rhodot), lidar has two measurements (x, y).
+
+first measurement - the filter will receive initial measurements of the bicycle's position relative to the car. These measurements will come from a radar or lidar sensor.
+initialize state and covariance matrices - the filter will initialize the bicycle's position based on the first measurement.
+
+then the car will receive another sensor measurement after a time period \Delta{t}Δt.
+
+predict - the algorithm will predict where the bicycle will be after time \Delta{t}Δt. One basic way to predict the bicycle location after \Delta{t}Δt is to assume the bicycle's velocity is constant; thus the bicycle will have moved velocity * \Delta{t}Δt. In the extended Kalman filter lesson, we will assume the velocity is constant.
+
+update - the filter compares the "predicted" location with what the sensor measurement says. The predicted location and the measured location are combined to give an updated location. The Kalman filter will put more weight on either the predicted location or the measured location depending on the uncertainty of each value.
+
+then the car will receive another sensor measurement after a time period \Delta{t}Δt. The algorithm then does another predict and update step.
+
+## Goals
+px, py, vx, vy output coordinates must have an RMSE <= [.11, .11, 0.52, 0.52] when using the file: "obj_pose-laser-radar-synthetic-input.txt" which is the same data file the simulator uses for Dataset 1.
+
+## Extended Kalman Filter Implementation Algorithm:
+
+
+
+
+#General instructions
 In this project you will utilize a kalman filter to estimate the state of a moving object of interest with noisy lidar and radar measurements. Passing the project requires obtaining RMSE values that are lower than the tolerance outlined in the project rubric. 
 
 This project involves the Term 2 Simulator which can be downloaded [here](https://github.com/udacity/self-driving-car-sim/releases)
@@ -61,22 +166,6 @@ OUTPUT: values provided by the c++ program to the simulator
    * On windows, you may need to run: `cmake .. -G "Unix Makefiles" && make`
 4. Run it: `./ExtendedKF `
 
-## Editor Settings
-
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
-
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
-
-## Code Style
-
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
-
-## Generating Additional Data
-
-This is optional!
 
 If you'd like to generate your own radar and lidar data, see the
 [utilities repo](https://github.com/udacity/CarND-Mercedes-SF-Utilities) for
@@ -84,46 +173,6 @@ Matlab scripts that can generate additional data.
 
 ## Project Instructions and Rubric
 
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
 
-More information is only accessible by people who are already enrolled in Term 2
-of CarND. If you are enrolled, see [the project resources page](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/0949fca6-b379-42af-a919-ee50aa304e6a/lessons/f758c44c-5e40-4e01-93b5-1a82aa4e044f/concepts/382ebfd6-1d55-4487-84a5-b6a5a4ba1e47)
-for instructions and the project rubric.
 
-## Hints and Tips!
-
-* You don't have to follow this directory structure, but if you do, your work
-  will span all of the .cpp files here. Keep an eye out for TODOs.
-* Students have reported rapid expansion of log files when using the term 2 simulator.  This appears to be associated with not being connected to uWebSockets.  If this does occur,  please make sure you are conneted to uWebSockets. The following workaround may also be effective at preventing large log files.
-
-    + create an empty log file
-    + remove write permissions so that the simulator can't write to log
- * Please note that the ```Eigen``` library does not initialize ```VectorXd``` or ```MatrixXd``` objects with zeros upon creation.
-
-## Call for IDE Profiles Pull Requests
-
-Help your fellow students!
-
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to ensure
-that students don't feel pressured to use one IDE or another.
-
-However! We'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
-
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
-
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
-
-Regardless of the IDE used, every submitted project must
-still be compilable with cmake and make.
-
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
 
