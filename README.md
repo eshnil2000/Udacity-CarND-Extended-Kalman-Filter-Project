@@ -19,9 +19,9 @@ Process noise refers to the uncertainty in the prediction step. We assume the ob
 Update
 Now we get some sensor information that tells where the object is relative to the car. First we compare where we think we are with what the sensor data tells us y = z - Hx'y=z−Hx 
 
-The K matrix, often called the Kalman filter gain, combines the uncertainty of where we think we are P with the uncertainty of our sensor measurement R. If our sensor measurements are very uncertain (R is high relative to P'), then the Kalman filter will give more weight to where we think we are: x'x 
+The K matrix, often called the Kalman filter gain, combines the uncertainty of where we think we are P with the uncertainty of our sensor measurement R. If our sensor measurements are very uncertain (R is high relative to P'), then the Kalman filter will give more weight to where we think we are: x'
 ′
- . If where we think we are is uncertain (P' is high relative to R), the Kalman filter will put more weight on the sensor measurement: zz.
+If where we think we are is uncertain (P' is high relative to R), the Kalman filter will put more weight on the sensor measurement: z.
 
 Measurement noise refers to uncertainty in sensor measurements. The notation \omega \sim N(0, R)ω∼N(0,R) defines the measurement noise as a gaussian distribution with mean zero and covariance R. Measurement noise comes from uncertainty in sensor measurements.
 
@@ -101,7 +101,8 @@ then the car will receive another sensor measurement after a time period \Delta{
 px, py, vx, vy output coordinates must have an RMSE <= [.11, .11, 0.52, 0.52] when using the file: "obj_pose-laser-radar-synthetic-input.txt" which is the same data file the simulator uses for Dataset 1.
 
 ## Extended Kalman Filter Implementation Algorithm:
-
+Here is the output video of the Kalman filter
+![Kalman Video](https://raw.githubusercontent.com/eshnil2000/Udacity-CarND-Extended-Kalman-Filter-Project/master/images/kalman.gif)
 
 
 
