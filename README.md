@@ -104,7 +104,33 @@ px, py, vx, vy output coordinates must have an RMSE <= [.11, .11, 0.52, 0.52] wh
 Here is the output video of the Kalman filter
 ![Kalman Video](https://raw.githubusercontent.com/eshnil2000/Udacity-CarND-Extended-Kalman-Filter-Project/master/images/kalman.gif)
 
+# Initialization of Matrices : [FusionEKF.cpp](https://raw.githubusercontent.com/eshnil2000/Udacity-CarND-Extended-Kalman-Filter-Project/master/FusionEKF.cpp)
 
+```c
+
+//measurement covariance matrix - laser
+R_laser_ << 0.0225, 0, 0, 0.0225;
+
+//measurement covariance matrix - radar
+  R_radar_ << 0.09, 0, 0,0, 0.0009, 0,0, 0, 0.09;
+//Measurement matrix - laser (shape: 2x4)
+  H_laser_ << 1, 0, 0, 0,0, 1, 0, 0;
+
+//x_ is state vector representing positionx, positiony, velocityx, velocityy
+    ekf_.x_ = VectorXd(4);
+    ekf_.x_ << 1, 1, 0, 0;
+
+    //Set first measurements to get started
+    float first_measurement_x = measurement_pack.raw_measurements_[0];
+    float first_measurement_y = measurement_pack.raw_measurements_[1];
+
+/**
+     *Initializing State uncertainity matrix. Set uncertainty for velocity about 10X that of position
+     */
+    ekf_.P_ = MatrixXd(4, 4);
+    ekf_.P_ << 10, 0, 0, 0,0, 10, 0, 0,0, 0, 1000, 0, 0, 0, 0, 1000;
+    
+```
 
 #General instructions
 In this project you will utilize a kalman filter to estimate the state of a moving object of interest with noisy lidar and radar measurements. Passing the project requires obtaining RMSE values that are lower than the tolerance outlined in the project rubric. 
