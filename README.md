@@ -104,7 +104,7 @@ px, py, vx, vy output coordinates must have an RMSE <= [.11, .11, 0.52, 0.52] wh
 Here is the output video of the Kalman filter
 ![Kalman Video](https://raw.githubusercontent.com/eshnil2000/Udacity-CarND-Extended-Kalman-Filter-Project/master/images/kalman.gif)
 
-# Initialization of Matrices : [FusionEKF.cpp](https://raw.githubusercontent.com/eshnil2000/Udacity-CarND-Extended-Kalman-Filter-Project/master/FusionEKF.cpp)
+# Initialization of Matrices : [FusionEKF.cpp](https://raw.githubusercontent.com/eshnil2000/Udacity-CarND-Extended-Kalman-Filter-Project/master/src/FusionEKF.cpp)
 
 ```c
 
@@ -129,7 +129,7 @@ R_laser_ << 0.0225, 0, 0, 0.0225;
      */
     ekf_.P_ = MatrixXd(4, 4);
     ekf_.P_ << 10, 0, 0, 0,0, 10, 0, 0,0, 0, 1000, 0, 0, 0, 0, 1000;
-    
+
 ```
 
 #General instructions

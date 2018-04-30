@@ -36,7 +36,8 @@ void KalmanFilter::Update(const VectorXd &z) {
   TODO:
     * update the state by using Kalman Filter equations
   */
-  VectorXd y = z - H_ * x_;
+  VectorXd z_pred = H_ * x_;
+  VectorXd y = z - z_pred;
   MatrixXd Ht = H_.transpose();
   MatrixXd S = (H_ * P_ * Ht) + R_;
   MatrixXd Si = S.inverse();
@@ -77,13 +78,22 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
       (px * vx + py * vy)/sqrt_px2_py2;
   VectorXd y = z - h;
 
-  //Normalize phi angle and bring it in the range (-pi, pi)
-  while (y[1] > M_PI) {
+  /*In C++, atan2() returns values between -pi and pi. 
+  When calculating phi in y = z - h(x) for radar measurements, 
+  the resulting angle phi in the y vector should be adjusted 
+  so that it is between -pi and pi. 
+  The Kalman filter is expecting small angle values between the range -pi and pi. 
+  HINT: when working in radians, you can add 2\pi 2π or subtract 2\pi 2π 
+  until the angle is within the desired range. */
+  /*Radar measurement : y[0] - radial distance, y[1] - phi/angle, y[2]- radial velocity*/
+
+  if (y[1] > M_PI) {
     y[1] -= 2.0 * M_PI;
+
   }
-  while (y[1] <-M_PI) {
+  if (y[1] <-M_PI) {
     y[1] += 2.0 * M_PI;
-  }
+  } 
 
   MatrixXd Ht = H_.transpose();
   MatrixXd S = H_ * P_ * Ht + R_;
